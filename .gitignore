@@ -5,6 +5,7 @@
 *.log
 applications*.csv
 apply-state-*.json
+applied-jobs.json
 *.png
 
 # saved browser sessions (contain logged-in cookies)
