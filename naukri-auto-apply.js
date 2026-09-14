@@ -52,18 +52,21 @@ const searchUrl = (title, location) => {
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const rand  = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
 
-// ── Check if a job URL was posted within the last N days ─────────────────────
+// ── Extract posting date from a Naukri job URL ───────────────────────────────
 // Naukri embeds posting date as DDMMYY right before the 6-digit job ID at the end
 // e.g. job-listings-react-developer-infosys-140926012345 → 14 Sep 2026
-function isRecentJob(url, daysBack = 1) {
+function getJobDate(url) {
   const match = url.match(/(\d{6})\d{6}$/);
-  if (!match) return true; // can't determine date — include it
+  if (!match) return new Date(0);
   const s = match[1];
-  const jobDate = new Date(2000 + parseInt(s.slice(4, 6)), parseInt(s.slice(2, 4)) - 1, parseInt(s.slice(0, 2)));
-  const cutoff  = new Date();
+  return new Date(2000 + parseInt(s.slice(4, 6)), parseInt(s.slice(2, 4)) - 1, parseInt(s.slice(0, 2)));
+}
+
+function isRecentJob(url, daysBack = 3) {
+  const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - daysBack);
   cutoff.setHours(0, 0, 0, 0);
-  return jobDate >= cutoff;
+  return getJobDate(url) >= cutoff;
 }
 
 // ── Collect job URLs from a search result page ────────────────────────────────
@@ -82,10 +85,11 @@ async function collectJobLinks(page, url) {
     (els) => [...new Set(els.map((el) => el.href).filter(Boolean))]
   );
 
-  // Only keep actual job listings posted in the last 1 day
+  // Only keep actual job listings posted in the last 3 days, newest first
   return links
     .filter((u) => u.includes('naukri.com/job-listings-'))
-    .filter((u) => isRecentJob(u, 1));
+    .filter((u) => isRecentJob(u, 3))
+    .sort((a, b) => getJobDate(b) - getJobDate(a));
 }
 
 // ── Handle the apply modal / form that appears after clicking Apply ───────────
